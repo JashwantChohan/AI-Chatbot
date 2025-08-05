@@ -1,11 +1,12 @@
-import {GEMINI_API_KEY } from './config.js'
+import { GEMINI_API_KEY } from './config.js'
 
 const chatBody = document.querySelector(".chat-body")
 const messageInput = document.querySelector(".message-input")
 const sendMessageButton = document.querySelector("#send-message")
+const fileInput = document.querySelector("#file-input")
 
 // API setup
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY }`
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
 const userData = {
     message: null
@@ -21,9 +22,11 @@ const createMessageElement = (content, ...classes) => {
 
 
 // generate bot response using API
-const generateBotResponse = async () => {
+const generateBotResponse = async (incomingMessageDiv) => {
+    const messageElement = incomingMessageDiv.querySelector(".message-text")
+
     // API request options
-    const resquestOption = {
+    const requestOption = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -42,14 +45,22 @@ const generateBotResponse = async () => {
 
     try {
         // Fetch bot response from API 
-        const response = await fetch(API_URL, resquestOption)
+        const response = await fetch(API_URL, requestOption)
         const data = await response.json()
         if (!response.ok) throw new Error(data.error.message)
 
-        console.log(data)
+        // Extract and display bot's reponse text
+        const apiResponseText = data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, "$1").trim()
+        messageElement.innerText = apiResponseText
     } catch (error) {
         console.log(error)
+        messageElement.innerText = error.message
+        messageElement.style.color = "#ff0000"
+    } finally {
+        incomingMessageDiv.classList.remove("thinking")
+        chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" })
     }
+
 }
 
 //  handle ongoing messages
@@ -64,6 +75,7 @@ const handleOutgoingMessage = (e) => {
     const outgoingMessageDiv = createMessageElement(messageContent, "user-message")
     outgoingMessageDiv.querySelector(".message-text").textContent = userData.message
     chatBody.appendChild(outgoingMessageDiv)
+    chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" })
 
 
     //  simulate bot response with thinking indicator after a delay
@@ -86,7 +98,8 @@ const handleOutgoingMessage = (e) => {
 
         const incomingMessageDiv = createMessageElement(messageContent, "bot-message", "thinking")
         chatBody.appendChild(incomingMessageDiv)
-        generateBotResponse()
+        chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" })
+        generateBotResponse(incomingMessageDiv)
     }, 600)
 }
 
