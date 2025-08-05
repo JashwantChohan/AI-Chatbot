@@ -9,7 +9,11 @@ const fileInput = document.querySelector("#file-input")
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
 const userData = {
-    message: null
+    message: null,
+    file: {
+        data: null,
+        mime_type: null
+    }
 }
 
 // create message element with dynamic classes and retun it 
@@ -32,11 +36,7 @@ const generateBotResponse = async (incomingMessageDiv) => {
         body: JSON.stringify({
             contents: [
                 {
-                    parts: [
-                        {
-                            text: userData.message
-                        }
-                    ]
+                    parts: [{text: userData.message}, ...API_URL(userData.file.data ? [{inline_data}]: [])]
                 }
             ]
         })
@@ -111,4 +111,27 @@ messageInput.addEventListener("keydown", (e) => {
     }
 })
 
+
+// Handle file input change
+fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        const base64String = e.target.result.split(",")[1]
+
+        //  store file data in userData
+            userData.file = {
+                data: base64String,
+                mime_type: file.type
+            }
+       
+            fileInput.value = ""
+    }
+
+    reader.readAsDataURL(file)
+})
+
 sendMessageButton.addEventListener("click", (e) => handleOutgoingMessage(e))
+document.querySelector("#file-upload").addEventListener("click", () => fileInput.click())
