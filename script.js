@@ -4,6 +4,7 @@ const chatBody = document.querySelector(".chat-body")
 const messageInput = document.querySelector(".message-input")
 const sendMessageButton = document.querySelector("#send-message")
 const fileInput = document.querySelector("#file-input")
+const fileUploadWrapper = document.querySelector(".file-upload-wrapper")
 
 // API setup
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
@@ -36,7 +37,7 @@ const generateBotResponse = async (incomingMessageDiv) => {
         body: JSON.stringify({
             contents: [
                 {
-                    parts: [{text: userData.message}, ...API_URL(userData.file.data ? [{inline_data}]: [])]
+                    parts: [{ text: userData.message }, ...(userData.file.data ? [{ inline_data: userData.file }] : [])]
                 }
             ]
         })
@@ -53,10 +54,13 @@ const generateBotResponse = async (incomingMessageDiv) => {
         const apiResponseText = data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, "$1").trim()
         messageElement.innerText = apiResponseText
     } catch (error) {
+        // handle error in API response
         console.log(error)
         messageElement.innerText = error.message
         messageElement.style.color = "#ff0000"
     } finally {
+        // Reset user's file data, removing indicator and scroll chat to bottom 
+        userData.file = {}
         incomingMessageDiv.classList.remove("thinking")
         chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" })
     }
@@ -70,7 +74,7 @@ const handleOutgoingMessage = (e) => {
     messageInput.value = ""
 
     // create and display user message
-    const messageContent = `<div class="message-text"></div>`
+    const messageContent = `<div class="message-text"></div> ${userData.file.data ? `<img src = "data:${userData.file.mime_type};base64, ${userData.file.data}" class="attachment" />` : ""} `
 
     const outgoingMessageDiv = createMessageElement(messageContent, "user-message")
     outgoingMessageDiv.querySelector(".message-text").textContent = userData.message
@@ -119,15 +123,17 @@ fileInput.addEventListener("change", () => {
 
     const reader = new FileReader()
     reader.onload = (e) => {
+        fileUploadWrapper.querySelector("img").src = e.target.result;
+        fileUploadWrapper.classList.add('file-uploaded')
         const base64String = e.target.result.split(",")[1]
 
         //  store file data in userData
-            userData.file = {
-                data: base64String,
-                mime_type: file.type
-            }
-       
-            fileInput.value = ""
+        userData.file = {
+            data: base64String,
+            mime_type: file.type
+        }
+
+        fileInput.value = ""
     }
 
     reader.readAsDataURL(file)
