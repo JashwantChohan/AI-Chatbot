@@ -5,6 +5,7 @@ const messageInput = document.querySelector(".message-input")
 const sendMessageButton = document.querySelector("#send-message")
 const fileInput = document.querySelector("#file-input")
 const fileUploadWrapper = document.querySelector(".file-upload-wrapper")
+const fileCancelButton = document.querySelector("#file-cancel")
 
 // API setup
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
@@ -72,6 +73,7 @@ const handleOutgoingMessage = (e) => {
     e.preventDefault()
     userData.message = messageInput.value.trim()
     messageInput.value = ""
+    fileUploadWrapper.classList.remove('file-uploaded')
 
     // create and display user message
     const messageContent = `<div class="message-text"></div> ${userData.file.data ? `<img src = "data:${userData.file.mime_type};base64, ${userData.file.data}" class="attachment" />` : ""} `
@@ -138,6 +140,35 @@ fileInput.addEventListener("change", () => {
 
     reader.readAsDataURL(file)
 })
+
+// cancel file upload
+fileCancelButton.addEventListener("click", () => {
+    userData.file = {}
+    fileUploadWrapper.classList.remove("file-uploaded")
+})
+
+// initialize emoji pickera and handle emoji selection
+const picker = new EmojiMart.Picker({
+    theme: "light",
+    skinTonePosition: "none",
+    previewPosition: "none",
+    onEmojiSelect: (emoji) => {
+        const { selectionStart: start, selectionEnd: end } = messageInput
+        messageInput.setRangeText(emoji.native, start, end, "end")
+        messageInput.focus()
+    },
+    onClickOutside: (e) => {
+        if (e.target.id === "emoji-picker") {
+            document.body.classList.toggle("show-emoji-picker")
+        } else {
+            document.body.classList.remove("show-emoji-picker")
+        }
+    }
+})
+
+document.querySelector(".chat-form ").appendChild(picker)
+
+
 
 sendMessageButton.addEventListener("click", (e) => handleOutgoingMessage(e))
 document.querySelector("#file-upload").addEventListener("click", () => fileInput.click())
