@@ -19,6 +19,9 @@ const userData = {
     }
 }
 
+const chatHistory = []
+const initialInputHeight = messageInput.scrollHeight
+
 // create message element with dynamic classes and retun it 
 const createMessageElement = (content, ...classes) => {
     const div = document.createElement("div")
@@ -32,16 +35,18 @@ const createMessageElement = (content, ...classes) => {
 const generateBotResponse = async (incomingMessageDiv) => {
     const messageElement = incomingMessageDiv.querySelector(".message-text")
 
+    // Add user message to chat history
+    chatHistory.push({
+        role: "user",
+        parts: [{ text: userData.message }, ...(userData.file.data ? [{ inline_data: userData.file }] : [])]
+    })
+
     // API request options
     const requestOption = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            contents: [
-                {
-                    parts: [{ text: userData.message }, ...(userData.file.data ? [{ inline_data: userData.file }] : [])]
-                }
-            ]
+            contents: chatHistory
         })
     }
 
@@ -55,6 +60,12 @@ const generateBotResponse = async (incomingMessageDiv) => {
         // Extract and display bot's reponse text
         const apiResponseText = data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, "$1").trim()
         messageElement.innerText = apiResponseText
+
+        // Add bot response to chat history
+        chatHistory.push({
+        role: "model",
+        parts: [{ text: apiResponseText }]
+    })
     } catch (error) {
         // handle error in API response
         console.log(error)
@@ -69,12 +80,13 @@ const generateBotResponse = async (incomingMessageDiv) => {
 
 }
 
-//  handle ongoing messages
+//  handle outgoing user messages
 const handleOutgoingMessage = (e) => {
     e.preventDefault()
     userData.message = messageInput.value.trim()
     messageInput.value = ""
     fileUploadWrapper.classList.remove('file-uploaded')
+    messageInput.dispatchEvent(new Event("input"))
 
     // create and display user message
     const messageContent = `<div class="message-text"></div> ${userData.file.data ? `<img src = "data:${userData.file.mime_type};base64, ${userData.file.data}" class="attachment" />` : ""} `
@@ -113,9 +125,16 @@ const handleOutgoingMessage = (e) => {
 // handle Enter key press for message
 messageInput.addEventListener("keydown", (e) => {
     const userMessage = e.target.value.trim()
-    if (e.key === "Enter" && userMessage) {
+    if (e.key === "Enter" && userMessage && !e.shiftKey && window.innerWidth > 768) {
         handleOutgoingMessage(e)
     }
+})
+
+// Adjust input field height dynamically
+messageInput.addEventListener("input", () => {
+    messageInput.style.height = `${initialInputHeight}px`
+    messageInput.style.height = `${messageInput.scrollHeight}px`
+    document.querySelector(".chat-form").style.borderRadius = messageInput.scrollHeight > initialInputHeight ? "15px" : "32px"
 })
 
 
